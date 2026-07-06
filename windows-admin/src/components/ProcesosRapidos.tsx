@@ -82,7 +82,7 @@ export default function ProcesosRapidos({
   ]);
 
   const queryTimeoutRef = useRef<any>(null);
-  const isAdmin = currentUser.role === 'client';
+  const isAdmin = currentUser.role === 'admin';
 
   // --- Predefined Queries List ---
   const PREDEFINED_QUERIES = [
