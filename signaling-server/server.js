@@ -7,6 +7,7 @@ const dgram = require('dgram');
 const fs = require('fs');
 const multer = require('multer');
 const nodemailer = require('nodemailer');
+const AdmZip = require('adm-zip');
 
 const app = express();
 app.use(cors());
@@ -46,6 +47,9 @@ const logoStorage = multer.diskStorage({
   }
 });
 const logoUpload = multer({ storage: logoStorage });
+
+// Configuración de Multer para backups
+const backupUpload = multer({ dest: path.join(PERSIST_DIR, 'temp_backups') });
 
 // Historial de APKs
 const APK_HISTORY_FILE = path.join(PERSIST_DIR, 'apks_history.json');
@@ -1221,6 +1225,77 @@ udpServer.on('listening', () => {
 });
 udpServer.bind(() => {
   udpServer.setBroadcast(true);
+});
+
+// ==========================================
+// SISTEMA DE RESPALDO (BACKUP Y RESTORE)
+// ==========================================
+
+app.get('/api/backup/download', authenticateToken, (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'No autorizado' });
+    }
+
+    const zip = new AdmZip();
+    
+    // Función para agregar un archivo si existe
+    const addFileToZip = (filename) => {
+      const fullPath = path.join(PERSIST_DIR, filename);
+      if (fs.existsSync(fullPath)) {
+        zip.addLocalFile(fullPath);
+      }
+    };
+
+    // Archivos estáticos de BD
+    const filesToBackup = [
+      'users.json', 'groups.json', 'devices.json', 'pinned_groups.json', 'email_config.json'
+    ];
+    filesToBackup.forEach(addFileToZip);
+
+    // Bases de datos de procesos y branding por cliente
+    const allFiles = fs.readdirSync(PERSIST_DIR);
+    allFiles.forEach(file => {
+      if (file.startsWith('proceso_database_') || file.startsWith('branding_')) {
+        addFileToZip(file);
+      }
+    });
+
+    // Carpeta de logos
+    if (fs.existsSync(LOGOS_DIR)) {
+      zip.addLocalFolder(LOGOS_DIR, 'uploads/logos');
+    }
+
+    const zipBuffer = zip.toBuffer();
+    res.set('Content-Type', 'application/zip');
+    res.set('Content-Disposition', 'attachment; filename=respaldo_control_remoto.zip');
+    res.send(zipBuffer);
+
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+app.post('/api/backup/upload', authenticateToken, backupUpload.single('backup'), (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'No autorizado' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No se envió ningún archivo' });
+    }
+
+    const zip = new AdmZip(req.file.path);
+    // Descomprimir sobrescribiendo los archivos en PERSIST_DIR
+    zip.extractAllTo(PERSIST_DIR, true);
+    
+    // Limpiar el archivo subido
+    fs.unlinkSync(req.file.path);
+
+    res.json({ success: true, message: 'Respaldo restaurado con éxito' });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
 });
 
 const PORT = process.env.PORT || 3000;

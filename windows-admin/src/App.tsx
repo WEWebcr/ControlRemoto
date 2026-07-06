@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { Monitor, Users, LogOut, ChevronLeft, ClipboardList, Mail, Terminal, Palette } from 'lucide-react';
+import { Monitor, Users, LogOut, ChevronLeft, ClipboardList, Mail, Terminal, Palette, DatabaseBackup } from 'lucide-react';
 import DeviceManager from './components/DeviceManager';
 import ScreenViewer from './components/ScreenViewer';
 import FileManager from './components/FileManager';
@@ -10,6 +10,7 @@ import AssetReport from './components/AssetReport';
 import MonitoringManager from './components/MonitoringManager';
 import ProcesosRapidos from './components/ProcesosRapidos';
 import BrandingConfig from './components/BrandingConfig';
+import BackupManager from './components/BackupManager';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -20,7 +21,7 @@ function App() {
   const [roomId, setRoomId] = useState('');
   
   // New Navigation State
-  const [activeView, setActiveView] = useState<'devices' | 'users' | 'assets' | 'monitoring' | 'proceso-rapido' | 'branding'>('devices');
+  const [activeView, setActiveView] = useState<'devices' | 'users' | 'assets' | 'monitoring' | 'proceso-rapido' | 'branding' | 'backup'>('devices');
   const [onlineDevicesDetails, setOnlineDevicesDetails] = useState<any[]>([]);
   const [branding, setBranding] = useState<any>(null);
   
@@ -310,6 +311,16 @@ function App() {
               <span>Usuarios</span>
             </div>
           )}
+
+          {currentUser.role === 'admin' && (
+            <div 
+              className={`nav-item ${activeView === 'backup' ? 'active' : ''}`}
+              onClick={() => setActiveView('backup')}
+            >
+              <DatabaseBackup size={22} />
+              <span>Respaldos</span>
+            </div>
+          )}
           
           {currentUser.role !== 'admin' && (currentUser.role === 'client') && (
             <>
@@ -409,6 +420,12 @@ function App() {
               if (newBranding.accentColor) document.documentElement.style.setProperty('--accent', newBranding.accentColor);
             }}
           />
+        </div>
+      )}
+
+      {activeView === 'backup' && currentUser.role === 'admin' && (
+        <div style={{ flex: 1, background: 'var(--bg-darker)', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+          <BackupManager serverUrl={currentServerUrl} token={currentUser.token} />
         </div>
       )}
     </div>
