@@ -34,6 +34,9 @@ class SocketClient {
             specs.put("marca", Build.MANUFACTURER)
             specs.put("modelo", Build.MODEL)
             
+            val prefs = context.getSharedPreferences("RostiPrefs", Context.MODE_PRIVATE)
+            specs.put("group", prefs.getString("device_owner", ""))
+            
             val androidId = Settings.Secure.getString(
                 context.contentResolver,
                 Settings.Secure.ANDROID_ID

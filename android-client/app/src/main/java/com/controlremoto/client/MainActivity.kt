@@ -46,6 +46,7 @@ class MainActivity : Activity() {
         val etPass = findViewById<EditText>(R.id.etPass)
         val btnLogin = findViewById<Button>(R.id.btnLogin)
         val btnSettings = findViewById<Button>(R.id.btnSettings)
+        val etOwner = findViewById<EditText>(R.id.etOwner)
 
         // Receptor de mensajes de diagnóstico del servicio
         val statusReceiver = object : BroadcastReceiver() {
@@ -105,6 +106,8 @@ class MainActivity : Activity() {
             }
             tvRoomCode.text = generatedCode
             
+            etOwner.setText(prefs.getString("device_owner", ""))
+            
             if (intent?.action == "ACTION_START_TRANSMISSION" && !isTransmissionIntentHandled) {
                 isTransmissionIntentHandled = true
                 // Limpiar la acción para que no se vuelva a ejecutar en reanudaciones
@@ -143,6 +146,9 @@ class MainActivity : Activity() {
         }
 
         btnConnect.setOnClickListener {
+            val ownerName = etOwner.text.toString().trim()
+            prefs.edit().putString("device_owner", ownerName).apply()
+            Toast.makeText(this, "Propietario guardado: $ownerName", Toast.LENGTH_SHORT).show()
             startScreenCapture()
         }
 

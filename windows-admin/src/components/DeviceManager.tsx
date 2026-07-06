@@ -714,22 +714,24 @@ export default function DeviceManager({
           )}
         </div>
 
-        <div className="tabs" style={{ marginTop: '16px', background: 'rgba(0,0,0,0.2)' }}>
-          <div 
-            className={`tab ${activeTab === 'list' ? 'active' : ''}`}
-            onClick={() => setActiveTab('list')}
-            style={{ fontSize: '0.8rem', padding: '6px 0' }}
-          >
-            Contactos
+        {role === 'admin' && (
+          <div className="tabs" style={{ marginTop: '16px', background: 'rgba(0,0,0,0.2)' }}>
+            <div 
+              className={`tab ${activeTab === 'list' ? 'active' : ''}`}
+              onClick={() => setActiveTab('list')}
+              style={{ fontSize: '0.8rem', padding: '6px 0' }}
+            >
+              Equipos
+            </div>
+            <div 
+              className={`tab ${activeTab === 'add' ? 'active' : ''}`}
+              onClick={() => setActiveTab('add')}
+              style={{ fontSize: '0.8rem', padding: '6px 0' }}
+            >
+              + Añadir
+            </div>
           </div>
-          <div 
-            className={`tab ${activeTab === 'add' ? 'active' : ''}`}
-            onClick={() => setActiveTab('add')}
-            style={{ fontSize: '0.8rem', padding: '6px 0' }}
-          >
-            + Añadir
-          </div>
-        </div>
+        )}
       </div>
 
       {activeTab === 'add' ? (
@@ -945,11 +947,11 @@ export default function DeviceManager({
                           </div>
                         )}
 
-                        {groupName !== 'Sin Grupo' && (
+                        {role === 'admin' && groupName !== 'Sin Grupo' && groupName !== 'Sin Asignar' && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (confirm(`¿Estás seguro de eliminar el grupo "${groupName}"? Los equipos dentro de él se moverán a "Sin Grupo".`)) {
+                              if (confirm(`¿Estás seguro de eliminar el cliente "${groupName}"? Los equipos dentro de él se moverán a "Sin Asignar".`)) {
                                 removeGroup(groupName);
                               }
                             }}
@@ -962,7 +964,7 @@ export default function DeviceManager({
                               display: 'flex',
                               alignItems: 'center'
                             }}
-                            title="Eliminar Grupo"
+                            title="Eliminar Cliente"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -1126,29 +1128,33 @@ export default function DeviceManager({
 
                 {/* Right: Group dropdown & Disconnect */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Grupo:</span>
-                    <select
-                      value={selectedDevice.group || ''}
-                      onChange={(e) => updateDeviceGroup(selectedDevice.id, e.target.value)}
-                      style={{
-                        background: 'rgba(0, 0, 0, 0.2)',
-                        border: '1px solid var(--border)',
-                        color: 'var(--text-main)',
-                        padding: '4px 8px',
-                        borderRadius: '6px',
-                        fontSize: '0.75rem',
-                        outline: 'none',
-                        cursor: 'pointer',
-                        height: '28px'
-                      }}
-                    >
-                      <option value="">Sin Grupo</option>
-                      {savedGroups.map(g => (
-                        <option key={g} value={g}>{g}</option>
-                      ))}
-                    </select>
-                  </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {role === 'admin' && (
+              <>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Cliente:</span>
+                <select
+                  value={selectedDevice.group || ''}
+                  onChange={(e) => updateDeviceGroup(selectedDevice.id, e.target.value)}
+                  style={{
+                    background: 'rgba(0, 0, 0, 0.2)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-main)',
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    fontSize: '0.75rem',
+                    outline: 'none',
+                    cursor: 'pointer',
+                    height: '28px'
+                  }}
+                >
+                  <option value="">Sin Asignar</option>
+                  {savedGroups.map(g => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+              </>
+            )}
+          </div>
                   <button 
                     onClick={() => { setActiveTool(null); onDisconnect(); }} 
                     style={{
@@ -1233,27 +1239,31 @@ export default function DeviceManager({
                 <h3 style={{ margin: '0 0 4px 0', fontSize: '1.2rem' }}>{selectedDevice.name}</h3>
                 <p style={{ margin: '0 0 12px 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>ID: {selectedDevice.id}</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Grupo:</span>
-                  <select
-                    value={selectedDevice.group || ''}
-                    onChange={(e) => updateDeviceGroup(selectedDevice.id, e.target.value)}
-                    style={{
-                      background: 'rgba(0, 0, 0, 0.2)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text-main)',
-                      padding: '4px 8px',
-                      borderRadius: '6px',
-                      fontSize: '0.8rem',
-                      outline: 'none',
-                      cursor: 'pointer',
-                      flex: 1
-                    }}
-                  >
-                    <option value="">Sin Grupo</option>
-                    {savedGroups.map(g => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </select>
+                  {role === 'admin' && (
+                    <>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Cliente:</span>
+                      <select
+                        value={selectedDevice.group || ''}
+                        onChange={(e) => updateDeviceGroup(selectedDevice.id, e.target.value)}
+                        style={{
+                          background: 'rgba(0, 0, 0, 0.2)',
+                          border: '1px solid var(--border)',
+                          color: 'var(--text-main)',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.8rem',
+                          outline: 'none',
+                          cursor: 'pointer',
+                          flex: 1
+                        }}
+                      >
+                        <option value="">Sin Asignar</option>
+                        {savedGroups.map(g => (
+                          <option key={g} value={g}>{g}</option>
+                        ))}
+                      </select>
+                    </>
+                  )}
                 </div>
                 <div className="status-badge" style={{ marginTop: 0 }}>Conexión Activa</div>
               </div>
@@ -1334,26 +1344,30 @@ export default function DeviceManager({
                   )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Grupo:</span>
-                  <select
-                    value={selectedDevice.group || ''}
-                    onChange={(e) => updateDeviceGroup(selectedDevice.id, e.target.value)}
-                    style={{
-                      background: 'rgba(0, 0, 0, 0.2)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text-main)',
-                      padding: '4px 8px',
-                      borderRadius: '6px',
-                      fontSize: '0.85rem',
-                      outline: 'none',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <option value="">Sin Grupo</option>
-                    {savedGroups.map(g => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </select>
+                  {role === 'admin' && (
+                    <>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Cliente:</span>
+                      <select
+                        value={selectedDevice.group || ''}
+                        onChange={(e) => updateDeviceGroup(selectedDevice.id, e.target.value)}
+                        style={{
+                          background: 'rgba(0, 0, 0, 0.2)',
+                          border: '1px solid var(--border)',
+                          color: 'var(--text-main)',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.85rem',
+                          outline: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="">Sin Asignar</option>
+                        {savedGroups.map(g => (
+                          <option key={g} value={g}>{g}</option>
+                        ))}
+                      </select>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

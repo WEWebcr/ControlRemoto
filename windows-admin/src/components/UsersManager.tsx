@@ -4,16 +4,17 @@ import { User, UserPlus, Trash2, Edit2, Shield, ShieldAlert, Key } from 'lucide-
 interface Props {
   serverUrl: string;
   token: string;
+  currentUser: { username: string; role: string; token: string };
 }
 
 interface UserData {
   username: string;
   role: string;
   passwordLength: number;
-  assignedGroup?: string;
+  tenant?: string;
 }
 
-export default function UsersManager({ serverUrl, token }: Props) {
+export default function UsersManager({ serverUrl, token, currentUser }: Props) {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,8 +25,7 @@ export default function UsersManager({ serverUrl, token }: Props) {
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [formUsername, setFormUsername] = useState('');
   const [formPassword, setFormPassword] = useState('');
-  const [formRole, setFormRole] = useState('user');
-  const [formAssignedGroup, setFormAssignedGroup] = useState('');
+  const [formRole, setFormRole] = useState(currentUser.role === 'admin' ? 'client' : 'sub_user');
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -72,8 +72,7 @@ export default function UsersManager({ serverUrl, token }: Props) {
         body: JSON.stringify({ 
           username: formUsername, 
           password: formPassword || undefined,
-          role: formRole,
-          assignedGroup: formRole === 'admin' ? undefined : formAssignedGroup
+          role: formRole
         })
       });
 
@@ -121,8 +120,7 @@ export default function UsersManager({ serverUrl, token }: Props) {
     setEditingUser(null);
     setFormUsername('');
     setFormPassword('');
-    setFormRole('user');
-    setFormAssignedGroup('');
+    setFormRole(currentUser.role === 'admin' ? 'client' : 'sub_user');
     setIsModalOpen(true);
   };
 
@@ -131,7 +129,6 @@ export default function UsersManager({ serverUrl, token }: Props) {
     setFormUsername(user.username);
     setFormPassword(''); // Don't show existing password
     setFormRole(user.role);
-    setFormAssignedGroup(user.assignedGroup || '');
     setIsModalOpen(true);
   };
 
@@ -191,7 +188,7 @@ export default function UsersManager({ serverUrl, token }: Props) {
                     color: u.role === 'admin' ? '#38bdf8' : 'var(--text-muted)'
                   }}>
                     {u.role === 'admin' ? <ShieldAlert size={14} /> : <Shield size={14} />}
-                    {u.role === 'admin' ? 'Administrador' : `Cliente (${u.assignedGroup || 'Sin Grupo'})`}
+                    {u.role === 'admin' ? 'Super Administrador' : u.role === 'client' ? 'Cliente Principal' : 'Sub-Usuario'}
                   </span>
                 </td>
                 <td style={{ padding: '16px', color: 'var(--text-muted)' }}>
@@ -250,26 +247,19 @@ export default function UsersManager({ serverUrl, token }: Props) {
                 <select 
                   value={formRole} 
                   onChange={e => setFormRole(e.target.value)}
-                  disabled={editingUser === 'admin'}
+                  disabled={editingUser === 'admin' || currentUser.role === 'client'}
                   style={{ width: '100%', padding: '10px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', borderRadius: '6px' }}
                 >
-                  <option value="user">Cliente (Grupo Específico)</option>
-                  <option value="admin">Administrador (Acceso Total)</option>
+                  {currentUser.role === 'admin' ? (
+                    <>
+                      <option value="client">Cliente Principal (Dueño de empresa)</option>
+                      <option value="admin">Super Administrador (Acceso Total)</option>
+                    </>
+                  ) : (
+                    <option value="sub_user">Sub-Usuario (Acceso a tus equipos)</option>
+                  )}
                 </select>
               </div>
-              
-              {formRole === 'user' && (
-                <div className="input-group">
-                  <label>Grupo Asignado (ID o Nombre exacto del grupo que administrará)</label>
-                  <input 
-                    type="text" 
-                    value={formAssignedGroup}
-                    onChange={e => setFormAssignedGroup(e.target.value)}
-                    required
-                    placeholder="Ej: Cliente A"
-                  />
-                </div>
-              )}
               
               <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
                 <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)}>Cancelar</button>

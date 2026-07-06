@@ -240,6 +240,7 @@ function App() {
     return <Login onLoginSuccess={(url, username, role, token) => {
       setCurrentServerUrl(url);
       setCurrentUser({ username, role, token });
+      setActiveView(role === 'admin' ? 'users' : 'devices');
       setIsAuthenticated(true);
     }} />;
   }
@@ -251,47 +252,52 @@ function App() {
         <div className="nav-sidebar">
           <div className="nav-logo">CR</div>
           
-          <div 
-            className={`nav-item ${activeView === 'devices' ? 'active' : ''}`}
-            onClick={() => setActiveView('devices')}
-          >
-            <Monitor size={22} />
-            <span>Equipos</span>
-          </div>
-
-          <div 
-            className={`nav-item ${activeView === 'assets' ? 'active' : ''}`}
-            onClick={() => setActiveView('assets')}
-          >
-            <ClipboardList size={22} />
-            <span>Activos</span>
-          </div>
-
-          <div 
-            className={`nav-item ${activeView === 'proceso-rapido' ? 'active' : ''}`}
-            onClick={() => setActiveView('proceso-rapido')}
-          >
-            <Terminal size={22} />
-            <span>Procesos</span>
-          </div>
-   
-          {currentUser.role === 'admin' && (
+          {currentUser.role !== 'admin' && (
             <>
               <div 
-                className={`nav-item ${activeView === 'users' ? 'active' : ''}`}
-                onClick={() => setActiveView('users')}
+                className={`nav-item ${activeView === 'devices' ? 'active' : ''}`}
+                onClick={() => setActiveView('devices')}
               >
-                <Users size={22} />
-                <span>Usuarios</span>
+                <Monitor size={22} />
+                <span>Equipos</span>
               </div>
+
               <div 
-                className={`nav-item ${activeView === 'monitoring' ? 'active' : ''}`}
-                onClick={() => setActiveView('monitoring')}
+                className={`nav-item ${activeView === 'assets' ? 'active' : ''}`}
+                onClick={() => setActiveView('assets')}
               >
-                <Mail size={22} />
-                <span>Monitoreo</span>
+                <ClipboardList size={22} />
+                <span>Activos</span>
+              </div>
+
+              <div 
+                className={`nav-item ${activeView === 'proceso-rapido' ? 'active' : ''}`}
+                onClick={() => setActiveView('proceso-rapido')}
+              >
+                <Terminal size={22} />
+                <span>Procesos</span>
               </div>
             </>
+          )}
+   
+          {(currentUser.role === 'admin' || currentUser.role === 'client') && (
+            <div 
+              className={`nav-item ${activeView === 'users' ? 'active' : ''}`}
+              onClick={() => setActiveView('users')}
+            >
+              <Users size={22} />
+              <span>Usuarios</span>
+            </div>
+          )}
+          
+          {currentUser.role !== 'admin' && (currentUser.role === 'client') && (
+            <div 
+              className={`nav-item ${activeView === 'monitoring' ? 'active' : ''}`}
+              onClick={() => setActiveView('monitoring')}
+            >
+              <Mail size={22} />
+              <span>Monitoreo</span>
+            </div>
           )}
    
           <div style={{ marginTop: 'auto', marginBottom: '16px' }}>
@@ -328,9 +334,9 @@ function App() {
         />
       )}
  
-      {activeView === 'users' && currentUser.role === 'admin' && (
+      {activeView === 'users' && (currentUser.role === 'admin' || currentUser.role === 'client') && (
         <div style={{ flex: 1, background: 'var(--bg-darker)', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-          <UsersManager serverUrl={currentServerUrl} token={currentUser.token} />
+          <UsersManager serverUrl={currentServerUrl} token={currentUser.token} currentUser={currentUser} />
         </div>
       )}
 
@@ -355,7 +361,7 @@ function App() {
         </div>
       )}
 
-      {activeView === 'monitoring' && currentUser.role === 'admin' && (
+      {activeView === 'monitoring' && currentUser.role === 'client' && (
         <div style={{ flex: 1, background: 'var(--bg-darker)', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
           <MonitoringManager serverUrl={currentServerUrl} token={currentUser.token} />
         </div>

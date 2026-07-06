@@ -209,8 +209,10 @@ app.post('/api/login', (req, res) => {
   
   if (user) {
     const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
-    activeSessions.set(token, { username: user.username, role: user.role, assignedGroup: user.assignedGroup });
-    res.json({ success: true, token, username: user.username, role: user.role, assignedGroup: user.assignedGroup });
+    // Para el admin, tenant puede ser undefined. Para client o sub_user, es el dueño de los equipos
+    const tenant = user.tenant || (user.role === 'client' ? user.username : undefined);
+    activeSessions.set(token, { username: user.username, role: user.role, tenant });
+    res.json({ success: true, token, username: user.username, role: user.role, tenant });
   } else {
     res.status(401).json({ success: false, error: 'Credenciales incorrectas' });
   }
@@ -229,57 +231,83 @@ app.post('/api/logout', (req, res) => {
 
 // REST API para CRUD de Usuarios
 app.get('/api/users', authenticateToken, (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de administrador.' });
+  if (req.user.role !== 'admin' && req.user.role !== 'client') {
+    return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de administrador o cliente.' });
   }
   const users = loadUsers();
-  // No devolver las contraseñas reales por seguridad en el listado
-  const safeUsers = users.map(u => ({ username: u.username, role: u.role, assignedGroup: u.assignedGroup, passwordLength: u.password.length }));
+  const filteredUsers = req.user.role === 'admin' 
+    ? users 
+    : users.filter(u => u.tenant === req.user.username);
+  const safeUsers = filteredUsers.map(u => ({ username: u.username, role: u.role, tenant: u.tenant, passwordLength: u.password.length }));
   res.json(safeUsers);
 });
 
 app.post('/api/users', authenticateToken, (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de administrador.' });
+  if (req.user.role !== 'admin' && req.user.role !== 'client') {
+    return res.status(403).json({ error: 'Acceso denegado.' });
   }
-  const { username, password, role, assignedGroup } = req.body;
+  const { username, password, role } = req.body;
   const users = loadUsers();
+  
   if (users.find(u => u.username === username)) {
     return res.status(400).json({ error: 'El usuario ya existe' });
   }
-  users.push({ username, password, role: role || 'user', assignedGroup });
+
+  if (req.user.role === 'client' && role !== 'sub_user') {
+    return res.status(403).json({ error: 'Un cliente solo puede crear sub-usuarios.' });
+  }
+
+  const tenant = req.user.role === 'client' ? req.user.username : undefined;
+  users.push({ username, password, role: role || 'user', tenant });
   saveUsers(users);
   res.json({ success: true });
 });
 
 app.put('/api/users/:username', authenticateToken, (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de administrador.' });
+  if (req.user.role !== 'admin' && req.user.role !== 'client') {
+    return res.status(403).json({ error: 'Acceso denegado.' });
   }
-  const { password, role, assignedGroup } = req.body;
+  const { password, role } = req.body;
   const users = loadUsers();
   const index = users.findIndex(u => u.username === req.params.username);
+  
   if (index === -1) return res.status(404).json({ error: 'Usuario no encontrado' });
   
+  // Cliente solo puede editar sus propios sub-usuarios
+  if (req.user.role === 'client' && users[index].tenant !== req.user.username) {
+    return res.status(403).json({ error: 'No tienes permiso para editar este usuario.' });
+  }
+  
   if (password) users[index].password = password;
-  if (role && req.params.username !== 'admin') users[index].role = role; // No permitir quitar admin al admin principal
-  if (assignedGroup !== undefined) users[index].assignedGroup = assignedGroup;
+  if (role && req.params.username !== 'admin') {
+    if (req.user.role === 'client' && role !== 'sub_user') {
+      return res.status(403).json({ error: 'Solo puedes asignar rol de sub-usuario.' });
+    }
+    users[index].role = role;
+  }
   
   saveUsers(users);
   res.json({ success: true });
 });
 
 app.delete('/api/users/:username', authenticateToken, (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de administrador.' });
+  if (req.user.role !== 'admin' && req.user.role !== 'client') {
+    return res.status(403).json({ error: 'Acceso denegado.' });
   }
   if (req.params.username === 'admin') {
     return res.status(400).json({ error: 'No se puede eliminar al administrador principal' });
   }
-  const users = loadUsers();
-  const filteredUsers = users.filter(u => u.username !== req.params.username);
-  if (users.length === filteredUsers.length) return res.status(404).json({ error: 'Usuario no encontrado' });
   
+  const users = loadUsers();
+  const userToDelete = users.find(u => u.username === req.params.username);
+  
+  if (!userToDelete) return res.status(404).json({ error: 'Usuario no encontrado' });
+  
+  if (req.user.role === 'client' && userToDelete.tenant !== req.user.username) {
+    return res.status(403).json({ error: 'No tienes permiso para eliminar este usuario.' });
+  }
+
+  const filteredUsers = users.filter(u => u.username !== req.params.username);
   saveUsers(filteredUsers);
   res.json({ success: true });
 });
@@ -407,8 +435,8 @@ app.get('/api/devices', authenticateToken, (req, res) => {
   if (req.user.role === 'admin') {
     res.json(devices);
   } else {
-    // Cliente
-    const clientDevices = devices.filter(d => d.group === req.user.assignedGroup);
+    // Cliente o Sub-usuario solo ven los de su tenant
+    const clientDevices = devices.filter(d => d.group === req.user.tenant);
     res.json(clientDevices);
   }
 });
@@ -884,7 +912,7 @@ function broadcastDevicesUpdate() {
       socket.emit('devices-update', allConnected);
       socket.emit('online-devices', allOnlineIds);
     } else {
-      const allowedGroup = socket.user.assignedGroup;
+      const allowedGroup = socket.user.tenant;
       const clientDevicesIds = savedDevices.filter(d => d.group === allowedGroup).map(d => d.id);
       
       const clientConnected = allConnected.filter(d => {

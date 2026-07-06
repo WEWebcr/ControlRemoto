@@ -66,49 +66,7 @@ function updateConnectionUI(status) {
   }
 }
 
-// Fetch groups list from server
-async function loadGroupsFromServer(serverUrl, currentGroup) {
-  try {
-    const response = await fetch(`${serverUrl}/api/groups`);
-    if (response.ok) {
-      const groups = await response.json();
-      if (Array.isArray(groups)) {
-        deviceGroupInput.innerHTML = '';
-        if (!groups.includes('Sin Grupo')) {
-          groups.unshift('Sin Grupo');
-        }
-        groups.forEach(g => {
-          const opt = document.createElement('option');
-          opt.value = g;
-          opt.textContent = g;
-          if (g === currentGroup) {
-            opt.selected = true;
-          }
-          deviceGroupInput.appendChild(opt);
-        });
-        return;
-      }
-    }
-  } catch (err) {
-    console.error("Error loading groups from server:", err);
-  }
-
-  // Fallback if fetch fails
-  deviceGroupInput.innerHTML = '';
-  const defs = ['Sin Grupo'];
-  if (currentGroup && currentGroup !== 'Sin Grupo') {
-    defs.push(currentGroup);
-  }
-  defs.forEach(g => {
-    const opt = document.createElement('option');
-    opt.value = g;
-    opt.textContent = g;
-    if (g === currentGroup) {
-      opt.selected = true;
-    }
-    deviceGroupInput.appendChild(opt);
-  });
-}
+// Fetch groups (Eliminado por ser texto libre)
 
 // Switch UI modes
 function updateViewMode() {
@@ -160,7 +118,8 @@ async function startApp() {
     console.error("Error setting version in UI:", e);
   }
 
-  await loadGroupsFromServer(config.serverUrl, config.group);
+  // Set input values
+  deviceGroupInput.value = config.group || '';
   updateViewMode();
 
   // Auto-connect
@@ -213,8 +172,6 @@ btnModalUnlock.addEventListener('click', async () => {
   const enteredPass = settingsPassInput.value;
   if (enteredPass === 'R0st1p017') {
     hideUnlockModal();
-    // Load fresh groups from server if possible before showing editing form
-    await loadGroupsFromServer(config.serverUrl, config.group);
     formCard.style.display = 'flex';
     statusDetailsCard.style.display = 'none';
     // Revelar el Servidor de Señalización al desbloquear con contraseña
