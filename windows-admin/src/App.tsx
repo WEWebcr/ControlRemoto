@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { Monitor, Users, LogOut, ChevronLeft, ClipboardList, Mail, Terminal } from 'lucide-react';
+import { Monitor, Users, LogOut, ChevronLeft, ClipboardList, Mail, Terminal, Palette } from 'lucide-react';
 import DeviceManager from './components/DeviceManager';
 import ScreenViewer from './components/ScreenViewer';
 import FileManager from './components/FileManager';
@@ -9,6 +9,7 @@ import UsersManager from './components/UsersManager';
 import AssetReport from './components/AssetReport';
 import MonitoringManager from './components/MonitoringManager';
 import ProcesosRapidos from './components/ProcesosRapidos';
+import BrandingConfig from './components/BrandingConfig';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -19,8 +20,9 @@ function App() {
   const [roomId, setRoomId] = useState('');
   
   // New Navigation State
-  const [activeView, setActiveView] = useState<'devices' | 'users' | 'assets' | 'monitoring' | 'proceso-rapido'>('devices');
+  const [activeView, setActiveView] = useState<'devices' | 'users' | 'assets' | 'monitoring' | 'proceso-rapido' | 'branding'>('devices');
   const [onlineDevicesDetails, setOnlineDevicesDetails] = useState<any[]>([]);
+  const [branding, setBranding] = useState<any>(null);
   
   const [currentUser, setCurrentUser] = useState({ username: '', role: '', token: '' });
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -52,6 +54,21 @@ function App() {
         setOnlineDevices(clientIds);
         setOnlineDevicesDetails(clients);
       });
+      
+      
+      // Cargar Branding
+      fetch(`${currentServerUrl}/api/branding`, {
+        headers: { 'Authorization': `Bearer ${currentUser.token}` }
+      }).then(res => res.json()).then(result => {
+        if (result.success && result.data) {
+          setBranding(result.data);
+          if (result.data.primaryColor) {
+            document.documentElement.style.setProperty('--primary', result.data.primaryColor);
+            // primary-hover could be derived, but we just set primary
+          }
+          if (result.data.accentColor) document.documentElement.style.setProperty('--accent', result.data.accentColor);
+        }
+      }).catch(err => console.error("Error loading branding", err));
       
       setSocket(globalSocket);
       
@@ -250,7 +267,11 @@ function App() {
       {/* 1. Nav Sidebar - Ocultar si está conectado para maximizar el espacio horizontal */}
       {!isConnected && (
         <div className="nav-sidebar">
-          <div className="nav-logo">CR</div>
+          <div className="nav-logo" style={branding?.logoUrl ? { background: 'transparent', padding: '2px', width: '48px', height: '48px' } : {}}>
+            {branding?.logoUrl ? (
+              <img src={`${currentServerUrl}${branding.logoUrl}`} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            ) : "CR"}
+          </div>
           
           {currentUser.role !== 'admin' && (
             <>
@@ -291,13 +312,22 @@ function App() {
           )}
           
           {currentUser.role !== 'admin' && (currentUser.role === 'client') && (
-            <div 
-              className={`nav-item ${activeView === 'monitoring' ? 'active' : ''}`}
-              onClick={() => setActiveView('monitoring')}
-            >
-              <Mail size={22} />
-              <span>Monitoreo</span>
-            </div>
+            <>
+              <div 
+                className={`nav-item ${activeView === 'monitoring' ? 'active' : ''}`}
+                onClick={() => setActiveView('monitoring')}
+              >
+                <Mail size={22} />
+                <span>Monitoreo</span>
+              </div>
+              <div 
+                className={`nav-item ${activeView === 'branding' ? 'active' : ''}`}
+                onClick={() => setActiveView('branding')}
+              >
+                <Palette size={22} />
+                <span>Branding</span>
+              </div>
+            </>
           )}
    
           <div style={{ marginTop: 'auto', marginBottom: '16px' }}>
@@ -364,6 +394,21 @@ function App() {
       {activeView === 'monitoring' && currentUser.role === 'client' && (
         <div style={{ flex: 1, background: 'var(--bg-darker)', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
           <MonitoringManager serverUrl={currentServerUrl} token={currentUser.token} />
+        </div>
+      )}
+
+      {activeView === 'branding' && currentUser.role === 'client' && (
+        <div style={{ flex: 1, background: 'var(--bg-darker)', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+          <BrandingConfig 
+            serverUrl={currentServerUrl} 
+            token={currentUser.token} 
+            currentBranding={branding}
+            onBrandingUpdated={(newBranding) => {
+              setBranding(newBranding);
+              if (newBranding.primaryColor) document.documentElement.style.setProperty('--primary', newBranding.primaryColor);
+              if (newBranding.accentColor) document.documentElement.style.setProperty('--accent', newBranding.accentColor);
+            }}
+          />
         </div>
       )}
     </div>

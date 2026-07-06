@@ -26,6 +26,27 @@ if (!fs.existsSync(VERSIONS_DIR)) {
   fs.mkdirSync(VERSIONS_DIR, { recursive: true });
 }
 
+// Directorio para logos personalizados
+const LOGOS_DIR = path.join(PERSIST_DIR, 'uploads', 'logos');
+if (!fs.existsSync(LOGOS_DIR)) {
+  fs.mkdirSync(LOGOS_DIR, { recursive: true });
+}
+app.use('/api/uploads/logos', express.static(LOGOS_DIR));
+
+// Configuración de Multer para logos
+const logoStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, LOGOS_DIR);
+  },
+  filename: (req, file, cb) => {
+    const tenant = req.user.tenant || req.user.username;
+    // Sobrescribir siempre con el mismo nombre para el tenant (logo_tenant.png)
+    const ext = path.extname(file.originalname) || '.png';
+    cb(null, `logo_${tenant}${ext}`);
+  }
+});
+const logoUpload = multer({ storage: logoStorage });
+
 // Historial de APKs
 const APK_HISTORY_FILE = path.join(PERSIST_DIR, 'apks_history.json');
 
@@ -501,6 +522,54 @@ app.post('/api/proceso-state', authenticateToken, (req, res) => {
   }
 });
 
+// ==========================================
+// CONFIGURACIÓN DE BRANDING POR CLIENTE
+// ==========================================
+
+app.get('/api/branding', authenticateToken, (req, res) => {
+  try {
+    const tenant = req.user.tenant || req.user.username;
+    const brandingFile = path.join(PERSIST_DIR, `branding_${tenant}.json`);
+    if (fs.existsSync(brandingFile)) {
+      const data = JSON.parse(fs.readFileSync(brandingFile, 'utf8'));
+      res.json({ success: true, data });
+    } else {
+      res.json({ success: true, data: {} });
+    }
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+app.post('/api/branding', authenticateToken, logoUpload.single('logo'), (req, res) => {
+  try {
+    const tenant = req.user.tenant || req.user.username;
+    // Permitir solo al rol 'client' guardar
+    if (req.user.role !== 'client' && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Permisos insuficientes para editar branding.' });
+    }
+
+    const brandingFile = path.join(PERSIST_DIR, `branding_${tenant}.json`);
+    let currentData = {};
+    if (fs.existsSync(brandingFile)) {
+      currentData = JSON.parse(fs.readFileSync(brandingFile, 'utf8'));
+    }
+
+    // Actualizar colores si vienen en el body
+    if (req.body.primaryColor) currentData.primaryColor = req.body.primaryColor;
+    if (req.body.accentColor) currentData.accentColor = req.body.accentColor;
+
+    // Si se subió una nueva imagen, actualizar la ruta
+    if (req.file) {
+      currentData.logoUrl = `/api/uploads/logos/${req.file.filename}?t=${Date.now()}`;
+    }
+
+    fs.writeFileSync(brandingFile, JSON.stringify(currentData, null, 2), 'utf8');
+    res.json({ success: true, message: 'Branding actualizado correctamente', data: currentData });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
 
 // ==========================================
 // CONFIGURACIÓN Y MONITOREO POR CORREO (SMTP)
