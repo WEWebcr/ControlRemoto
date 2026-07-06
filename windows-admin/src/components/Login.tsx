@@ -63,7 +63,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
       <div className="login-panel">
         <div className="login-header">
           <div className="icon-circle">
-            <img src="/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            <img src="./logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
           <h2>Remoto Control J&M</h2>
           <p>Autenticación Requerida</p>
