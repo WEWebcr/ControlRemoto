@@ -475,10 +475,10 @@ const PROCESO_DB_FILE = path.join(PERSIST_DIR, 'proceso_database.json');
 // Endpoint para obtener el estado de Procesos Rapidos
 app.get('/api/proceso-state', authenticateToken, (req, res) => {
   try {
-    if (fs.existsSync(PROCESO_DB_FILE)) {
-      const data = JSON.parse(fs.readFileSync(PROCESO_DB_FILE, 'utf8'));
-      
-      // Auto-match removed
+    const tenant = req.user.tenant || req.user.username;
+    const tenantDbFile = path.join(PERSIST_DIR, `proceso_database_${tenant}.json`);
+    if (fs.existsSync(tenantDbFile)) {
+      const data = JSON.parse(fs.readFileSync(tenantDbFile, 'utf8'));
       res.json({ success: true, data });
     } else {
       res.json({ success: true, data: {} });
@@ -492,7 +492,9 @@ app.get('/api/proceso-state', authenticateToken, (req, res) => {
 app.post('/api/proceso-state', authenticateToken, (req, res) => {
   try {
     const data = req.body;
-    fs.writeFileSync(PROCESO_DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+    const tenant = req.user.tenant || req.user.username;
+    const tenantDbFile = path.join(PERSIST_DIR, `proceso_database_${tenant}.json`);
+    fs.writeFileSync(tenantDbFile, JSON.stringify(data, null, 2), 'utf8');
     res.json({ success: true, message: 'Estado guardado correctamente' });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });

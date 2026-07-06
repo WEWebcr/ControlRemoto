@@ -82,7 +82,7 @@ export default function ProcesosRapidos({
   ]);
 
   const queryTimeoutRef = useRef<any>(null);
-  const isAdmin = currentUser.role === 'admin';
+  const isAdmin = currentUser.role === 'client';
 
   // --- Predefined Queries List ---
   const PREDEFINED_QUERIES = [
@@ -198,60 +198,10 @@ update CLIENTES set OBSERVACIONES='Cliente Uber' where CODCLIENTE=5000;`,
           setVpnAutoConnect(vpn.autoConnect !== false);
         }
       } else {
-        // Inicializar datos por defecto
-        const defaultLocs = [
-          { id: '1', name: 'Call Center', ip: '10.29.3.4', db: 'dbfrestcall' },
-          { id: '2', name: 'Cartago', ip: '10.1.18.2', db: 'dbfrest' },
-          { id: '3', name: 'City Mall', ip: '10.1.11.2', db: 'dbfrest' },
-          { id: '4', name: 'Coronado', ip: '10.1.23.2', db: 'dbfrest' },
-          { id: '5', name: 'Curridabat', ip: '10.1.10.2', db: 'dbfrest' },
-          { id: '6', name: 'Desamparados', ip: '10.1.24.2', db: 'dbfrest' },
-          { id: '7', name: 'Fc Parque Diversiones', ip: '10.2.13.20', db: 'dbfrest' },
-          { id: '8', name: 'Parque Diversiones', ip: '10.1.25.2', db: 'dbfrest' },
-          { id: '9', name: 'San Francisco', ip: '10.1.27.2', db: 'dbfrest' },
-          { id: '10', name: 'Praktico', ip: '10.1.32.2', db: 'dbfrest' },
-          { id: '11', name: 'Avenida Escazu', ip: '10.1.33.2', db: 'dbfrest' },
-          { id: '12', name: 'Escazú', ip: '10.1.2.2', db: 'dbfrest' },
-          { id: '13', name: 'Guadalupe', ip: '10.1.5.2', db: 'dbfrest' },
-          { id: '14', name: 'Heredia', ip: '10.1.4.2', db: 'dbfrest' },
-          { id: '15', name: 'Multiplaza del Este', ip: '10.1.17.2', db: 'dbfrest' },
-          { id: '16', name: 'Multiplaza Escazú', ip: '10.1.8.2', db: 'dbfrest' },
-          { id: '17', name: 'Oxígeno', ip: '10.1.16.2', db: 'dbfrest' },
-          { id: '18', name: 'Pinares', ip: '10.1.22.2', db: 'dbfrest' },
-          { id: '19', name: 'Plaza Lincoln', ip: '10.1.20.2', db: 'dbfrest' },
-          { id: '20', name: 'Real Alajuela', ip: '10.1.21.2', db: 'dbfrest' },
-          { id: '21', name: 'Real Cariari', ip: '10.1.15.2', db: 'dbfrest' },
-          { id: '22', name: 'Sabana', ip: '10.1.12.2', db: 'dbfrest' },
-          { id: '23', name: 'San José', ip: '10.1.7.2', db: 'dbfrest' },
-          { id: '24', name: 'San Pedro', ip: '10.1.40.2', db: 'dbfrest' },
-          { id: '25', name: 'Santa Ana', ip: '10.1.6.2', db: 'dbfrest' },
-          { id: '26', name: 'Terramall', ip: '10.1.14.2', db: 'dbfrest' },
-          { id: '27', name: 'Tibas', ip: '10.1.13.2', db: 'dbfrest' },
-          { id: '28', name: 'Ventanita Ayarco', ip: '10.2.9.20', db: 'dbfrest' },
-          { id: '29', name: 'Ventanita Cartago', ip: '10.2.2.20', db: 'dbfrest' },
-          { id: '30', name: 'Ventanita Monterán', ip: '10.2.11.20', db: 'dbfrest' },
-          { id: '31', name: 'Ventanita Multiflores', ip: '10.2.4.20', db: 'dbfrest' },
-          { id: '32', name: 'Ventanita Pozos', ip: '10.2.3.20', db: 'dbfrest' },
-          { id: '33', name: 'Ventanita Rohrmoser', ip: '10.2.0.80', db: 'dbfrest' },
-          { id: '34', name: 'Ventanita Sabanilla', ip: '10.2.1.20', db: 'dbfrest' },
-          { id: '35', name: 'Ventanita San Pablo', ip: '10.2.5.20', db: 'dbfrest' },
-          { id: '36', name: 'Ventanita Santo Domingo', ip: '10.2.10.20', db: 'dbfrest' },
-          { id: '37', name: 'Ventanita Tres Rios', ip: '10.2.6.20', db: 'dbfrest' },
-          { id: '38', name: 'Ventanita Guachipelin', ip: '10.1.26.10', db: 'dbfrest' },
-          { id: '39', name: 'Multicentro', ip: '10.1.42.2', db: 'dbfrest' },
-          { id: '40', name: 'Local Capacitación', ip: '10.29.1.18', db: 'dbfrestpruebas', deviceId: 'win-NDTSDK' },
-          { id: '41', name: 'Ventanita San Isidro', ip: '10.2.14.20', db: 'dbfrest' },
-          { id: '59881630.2388', name: 'Alajuela', ip: '10.1.3.2', db: 'dbfrest', deviceId: 'win-1C3E5B' }
-        ];
-        const defaultUsers = [
-          { id: '1', username: 'admin', password: 'R0st1p017', role: 'admin', allLocations: true, allowedLocations: [], allowedQueries: ['btn-q-mesa-bloqueada', 'btn-q-actividad', 'btn-q-violacion', 'btn-q-ventas', 'btn-q-eliminar-mesa', 'btn-q-subtotal', 'btn-q-limpiar-cliente-uber', 'btn-q-enviar-factura-misma-num', 'btn-q-enviar-factura-otra-num'] },
-          { id: '2', username: 'asolano', password: 'Rosti2026*', role: 'admin', allLocations: true, allowedLocations: [], allowedQueries: ['btn-q-mesa-bloqueada', 'btn-q-actividad', 'btn-q-violacion', 'btn-q-ventas', 'btn-q-eliminar-mesa', 'btn-q-subtotal', 'btn-q-limpiar-cliente-uber', 'btn-q-enviar-factura-misma-num', 'btn-q-enviar-factura-otra-num'] },
-          { id: '3', username: 'javalos', password: 'Rosti2026*', role: 'admin', allLocations: true, allowedLocations: [], allowedQueries: ['btn-q-mesa-bloqueada', 'btn-q-actividad', 'btn-q-violacion', 'btn-q-ventas', 'btn-q-eliminar-mesa', 'btn-q-subtotal', 'btn-q-limpiar-cliente-uber', 'btn-q-enviar-factura-misma-num', 'btn-q-enviar-factura-otra-num'] },
-          { id: '4', username: 'malfaro', password: 'Rosti2026*', role: 'admin', allLocations: true, allowedLocations: [], allowedQueries: ['btn-q-mesa-bloqueada', 'btn-q-actividad', 'btn-q-violacion', 'btn-q-ventas', 'btn-q-eliminar-mesa', 'btn-q-subtotal', 'btn-q-limpiar-cliente-uber', 'btn-q-enviar-factura-misma-num', 'btn-q-enviar-factura-otra-num'] }
-        ];
-        setLocations(defaultLocs);
-        setUsers(defaultUsers);
-        await saveState(defaultLocs, defaultUsers, [], { gateway: '', user: '', password: '', autoConnect: true });
+        // Inicializar datos vacíos
+        setLocations([]);
+        setUsers([]);
+        await saveState([], [], [], { gateway: '', user: '', password: '', autoConnect: true });
       }
     } catch (e) {
       console.error('Error fetching process state:', e);
