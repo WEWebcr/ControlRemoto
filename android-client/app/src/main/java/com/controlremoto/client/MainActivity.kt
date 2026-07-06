@@ -217,14 +217,29 @@ class MainActivity : Activity() {
                 .setTitle("Seleccionar Servidor")
                 .setSingleChoiceItems(options, checkedItem) { dialog, which ->
                     if (which == 0) {
-                        prefs.edit().putBoolean("use_remote", true).apply()
-                        prefs.edit().putString("server_url", "https://remoto-control-jm.onrender.com").apply()
-                        Toast.makeText(this, "Modo Nube activado. Reinicia la transmisión.", Toast.LENGTH_LONG).show()
+                        dialog.dismiss()
+                        
+                        val input = android.widget.EditText(this@MainActivity)
+                        input.hint = "https://..."
+                        input.setText(prefs.getString("server_url", "https://remoto-control-jm.onrender.com"))
+                        
+                        AlertDialog.Builder(this@MainActivity)
+                            .setTitle("Configurar Nube")
+                            .setMessage("Ingresa la URL del servidor en la nube:")
+                            .setView(input)
+                            .setPositiveButton("Guardar") { _, _ ->
+                                val url = input.text.toString().trim()
+                                prefs.edit().putBoolean("use_remote", true).apply()
+                                prefs.edit().putString("server_url", if (url.isEmpty()) "https://remoto-control-jm.onrender.com" else url).apply()
+                                Toast.makeText(this@MainActivity, "Modo Nube activado. Reinicia la transmisión.", Toast.LENGTH_LONG).show()
+                            }
+                            .setNegativeButton("Cancelar", null)
+                            .show()
                     } else {
                         prefs.edit().putBoolean("use_remote", false).apply()
-                        Toast.makeText(this, "Modo Local activado. Esperando detección...", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@MainActivity, "Modo Local activado. Esperando detección...", Toast.LENGTH_LONG).show()
+                        dialog.dismiss()
                     }
-                    dialog.dismiss()
                 }
                 .setNegativeButton("Cancelar", null)
                 .show()

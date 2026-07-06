@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Settings } from 'lucide-react';
 
 interface LoginProps {
   onLoginSuccess: (serverUrl: string, username: string, role: string, token: string) => void;
@@ -7,10 +8,12 @@ interface LoginProps {
 export default function Login({ onLoginSuccess }: LoginProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [serverUrl, setServerUrl] = useState('https://remoto-control-jm.onrender.com');
+  const [cloudUrl, setCloudUrl] = useState('https://remoto-control-jm.onrender.com');
+  const [serverUrl, setServerUrl] = useState('cloud');
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   useEffect(() => {
     const remember = localStorage.getItem('cr_remember_me') === 'true';
@@ -21,6 +24,10 @@ export default function Login({ onLoginSuccess }: LoginProps) {
       setUsername(savedUser);
       setPassword(savedPass);
     }
+    const savedCloudUrl = localStorage.getItem('cr_cloud_url');
+    if (savedCloudUrl) {
+      setCloudUrl(savedCloudUrl);
+    }
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -29,7 +36,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     setError('');
     
     try {
-      const url = serverUrl || 'http://127.0.0.1:3000';
+      const url = serverUrl === 'cloud' ? cloudUrl : 'http://127.0.0.1:3000';
       const response = await fetch(`${url}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -67,6 +74,14 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           </div>
           <h2>Remoto Control J&M</h2>
           <p>Autenticación Requerida</p>
+          <button 
+            type="button" 
+            onClick={() => setIsSettingsOpen(true)}
+            style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+            title="Configurar URL Nube"
+          >
+            <Settings size={20} />
+          </button>
         </div>
 
         <form onSubmit={handleLogin} className="login-form">
@@ -101,8 +116,8 @@ export default function Login({ onLoginSuccess }: LoginProps) {
               onChange={(e) => setServerUrl(e.target.value)}
               style={{ width: '100%', padding: '12px', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'white', marginBottom: '8px' }}
             >
-              <option value="http://127.0.0.1:3000">💻 Servidor Local (LAN)</option>
-              <option value="https://remoto-control-jm.onrender.com">☁️ Servidor Remoto (Nube)</option>
+              <option value="cloud">☁️ Servidor Remoto (Nube)</option>
+              <option value="local">💻 Servidor Local (LAN)</option>
             </select>
           </div>
 
@@ -123,6 +138,47 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           </button>
         </form>
       </div>
+
+      {isSettingsOpen && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+          <div className="glass-panel" style={{ width: '400px', padding: '24px' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Settings size={20} />
+              Configuración de Nube
+            </h3>
+            <div className="input-group">
+              <label>URL de Servidor Nube</label>
+              <input 
+                type="text" 
+                value={cloudUrl}
+                onChange={e => setCloudUrl(e.target.value)}
+                placeholder="https://..."
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
+              <button 
+                className="btn-secondary" 
+                onClick={() => setIsSettingsOpen(false)}
+              >
+                Cancelar
+              </button>
+              <button 
+                className="btn-primary" 
+                onClick={() => {
+                  localStorage.setItem('cr_cloud_url', cloudUrl);
+                  setIsSettingsOpen(false);
+                }}
+              >
+                Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

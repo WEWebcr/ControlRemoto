@@ -33,8 +33,8 @@ function loadConfig() {
       const data = fs.readFileSync(configPath, 'utf8');
       config = { ...config, ...JSON.parse(data) };
       
-      // Force migration to remote cloud URL if it is empty, local, or contains port 3000
-      if (!config.serverUrl || config.serverUrl.includes('localhost') || config.serverUrl.includes('127.0.0.1') || config.serverUrl.includes(':3000') || config.serverUrl.includes('kpisrosti.com') || config.serverUrl.includes('acceso.rosti.cr')) {
+      // Set default if empty
+      if (!config.serverUrl) {
         config.serverUrl = 'https://remoto-control-jm.onrender.com';
         saveConfig(config);
       }

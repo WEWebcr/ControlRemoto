@@ -80,8 +80,7 @@ function updateViewMode() {
     formCard.style.display = 'flex';
     statusDetailsCard.style.display = 'none';
   }
-  // Siempre ocultamos el campo del servidor al actualizar el modo de vista general
-  serverUrlField.style.display = 'none';
+  // serverUrlField.style.display = 'none'; // Ahora visible para configuración
 }
 
 // Password verification modal helpers
