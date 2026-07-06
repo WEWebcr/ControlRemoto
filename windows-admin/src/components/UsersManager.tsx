@@ -120,7 +120,7 @@ export default function UsersManager({ serverUrl, token, currentUser }: Props) {
     setEditingUser(null);
     setFormUsername('');
     setFormPassword('');
-    setFormRole(currentUser.role === 'admin' ? 'client' : 'sub_user');
+    setFormRole('sub_user');
     setIsModalOpen(true);
   };
 
@@ -247,17 +247,11 @@ export default function UsersManager({ serverUrl, token, currentUser }: Props) {
                 <select 
                   value={formRole} 
                   onChange={e => setFormRole(e.target.value)}
-                  disabled={editingUser === 'admin' || currentUser.role === 'client'}
+                  disabled={editingUser === 'admin'}
                   style={{ width: '100%', padding: '10px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', borderRadius: '6px' }}
                 >
-                  {currentUser.role === 'admin' ? (
-                    <>
-                      <option value="client">Cliente Principal (Dueño de empresa)</option>
-                      <option value="admin">Super Administrador (Acceso Total)</option>
-                    </>
-                  ) : (
-                    <option value="sub_user">Sub-Usuario (Acceso a tus equipos)</option>
-                  )}
+                  <option value="sub_user">Usuario Normal (Acceso a equipos)</option>
+                  <option value="admin">Administrador (Acceso Total)</option>
                 </select>
               </div>
               

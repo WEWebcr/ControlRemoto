@@ -40,10 +40,9 @@ const logoStorage = multer.diskStorage({
     cb(null, LOGOS_DIR);
   },
   filename: (req, file, cb) => {
-    const tenant = req.user.tenant || req.user.username;
-    // Sobrescribir siempre con el mismo nombre para el tenant (logo_tenant.png)
+    // Sobrescribir siempre con el mismo nombre (logo_default.png)
     const ext = path.extname(file.originalname) || '.png';
-    cb(null, `logo_${tenant}${ext}`);
+    cb(null, `logo_default${ext}`);
   }
 });
 const logoUpload = multer({ storage: logoStorage });
@@ -234,8 +233,8 @@ app.post('/api/login', (req, res) => {
   
   if (user) {
     const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
-    // Para el admin, tenant puede ser undefined. Para client o sub_user, es el dueño de los equipos
-    const tenant = user.tenant || (user.role === 'client' ? user.username : undefined);
+    // En arquitectura de un solo Render, el tenant siempre es default
+    const tenant = 'default';
     activeSessions.set(token, { username: user.username, role: user.role, tenant });
     res.json({ success: true, token, username: user.username, role: user.role, tenant });
   } else {
@@ -260,15 +259,13 @@ app.get('/api/users', authenticateToken, (req, res) => {
     return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de administrador o cliente.' });
   }
   const users = loadUsers();
-  const filteredUsers = req.user.role === 'admin' 
-    ? users 
-    : users.filter(u => u.tenant === req.user.username);
+  const filteredUsers = users;
   const safeUsers = filteredUsers.map(u => ({ username: u.username, role: u.role, tenant: u.tenant, passwordLength: u.password.length }));
   res.json(safeUsers);
 });
 
 app.post('/api/users', authenticateToken, (req, res) => {
-  if (req.user.role !== 'admin' && req.user.role !== 'client') {
+  if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Acceso denegado.' });
   }
   const { username, password, role } = req.body;
@@ -278,18 +275,14 @@ app.post('/api/users', authenticateToken, (req, res) => {
     return res.status(400).json({ error: 'El usuario ya existe' });
   }
 
-  if (req.user.role === 'client' && role !== 'sub_user') {
-    return res.status(403).json({ error: 'Un cliente solo puede crear sub-usuarios.' });
-  }
-
-  const tenant = req.user.role === 'client' ? req.user.username : undefined;
-  users.push({ username, password, role: role || 'user', tenant });
+  const tenant = 'default';
+  users.push({ username, password, role: role || 'sub_user', tenant });
   saveUsers(users);
   res.json({ success: true });
 });
 
 app.put('/api/users/:username', authenticateToken, (req, res) => {
-  if (req.user.role !== 'admin' && req.user.role !== 'client') {
+  if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Acceso denegado.' });
   }
   const { password, role } = req.body;
@@ -298,16 +291,8 @@ app.put('/api/users/:username', authenticateToken, (req, res) => {
   
   if (index === -1) return res.status(404).json({ error: 'Usuario no encontrado' });
   
-  // Cliente solo puede editar sus propios sub-usuarios
-  if (req.user.role === 'client' && users[index].tenant !== req.user.username) {
-    return res.status(403).json({ error: 'No tienes permiso para editar este usuario.' });
-  }
-  
   if (password) users[index].password = password;
   if (role && req.params.username !== 'admin') {
-    if (req.user.role === 'client' && role !== 'sub_user') {
-      return res.status(403).json({ error: 'Solo puedes asignar rol de sub-usuario.' });
-    }
     users[index].role = role;
   }
   
@@ -316,7 +301,7 @@ app.put('/api/users/:username', authenticateToken, (req, res) => {
 });
 
 app.delete('/api/users/:username', authenticateToken, (req, res) => {
-  if (req.user.role !== 'admin' && req.user.role !== 'client') {
+  if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Acceso denegado.' });
   }
   if (req.params.username === 'admin') {
@@ -326,14 +311,12 @@ app.delete('/api/users/:username', authenticateToken, (req, res) => {
   const users = loadUsers();
   const userToDelete = users.find(u => u.username === req.params.username);
   
-  if (!userToDelete) return res.status(404).json({ error: 'Usuario no encontrado' });
-  
-  if (req.user.role === 'client' && userToDelete.tenant !== req.user.username) {
-    return res.status(403).json({ error: 'No tienes permiso para eliminar este usuario.' });
+  if (!userToDelete) {
+    return res.status(404).json({ error: 'Usuario no encontrado' });
   }
 
-  const filteredUsers = users.filter(u => u.username !== req.params.username);
-  saveUsers(filteredUsers);
+  const newUsers = users.filter(u => u.username !== req.params.username);
+  saveUsers(newUsers);
   res.json({ success: true });
 });
 
@@ -493,15 +476,19 @@ app.post('/api/pinned-groups', authenticateToken, (req, res) => {
   if (!Array.isArray(pinned)) {
     return res.status(400).json({ error: 'La lista de grupos fijados debe ser un arreglo.' });
   }
+  savePinnedGroups(pinned);
+  res.json({ success: true, pinned });
 });
 
-const PROCESO_DB_FILE = path.join(PERSIST_DIR, 'proceso_database.json');
+// Helper for branding
+function getBrandingFile() {
+  return path.join(PERSIST_DIR, `branding_default.json`);
+}
 
 // Endpoint para obtener el estado de Procesos Rapidos
 app.get('/api/proceso-state', authenticateToken, (req, res) => {
   try {
-    const tenant = req.user.tenant || req.user.username;
-    const tenantDbFile = path.join(PERSIST_DIR, `proceso_database_${tenant}.json`);
+    const tenantDbFile = path.join(PERSIST_DIR, `proceso_database_default.json`);
     if (fs.existsSync(tenantDbFile)) {
       const data = JSON.parse(fs.readFileSync(tenantDbFile, 'utf8'));
       res.json({ success: true, data });
@@ -517,8 +504,7 @@ app.get('/api/proceso-state', authenticateToken, (req, res) => {
 app.post('/api/proceso-state', authenticateToken, (req, res) => {
   try {
     const data = req.body;
-    const tenant = req.user.tenant || req.user.username;
-    const tenantDbFile = path.join(PERSIST_DIR, `proceso_database_${tenant}.json`);
+    const tenantDbFile = path.join(PERSIST_DIR, `proceso_database_default.json`);
     fs.writeFileSync(tenantDbFile, JSON.stringify(data, null, 2), 'utf8');
     res.json({ success: true, message: 'Estado guardado correctamente' });
   } catch (e) {
@@ -532,8 +518,7 @@ app.post('/api/proceso-state', authenticateToken, (req, res) => {
 
 app.get('/api/branding', authenticateToken, (req, res) => {
   try {
-    const tenant = req.user.tenant || req.user.username;
-    const brandingFile = path.join(PERSIST_DIR, `branding_${tenant}.json`);
+    const brandingFile = getBrandingFile();
     if (fs.existsSync(brandingFile)) {
       const data = JSON.parse(fs.readFileSync(brandingFile, 'utf8'));
       res.json({ success: true, data });
@@ -547,13 +532,12 @@ app.get('/api/branding', authenticateToken, (req, res) => {
 
 app.post('/api/branding', authenticateToken, logoUpload.single('logo'), (req, res) => {
   try {
-    const tenant = req.user.tenant || req.user.username;
-    // Permitir solo al rol 'client' guardar
+    // Permitir solo al rol 'client' o 'admin' guardar
     if (req.user.role !== 'client' && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Permisos insuficientes para editar branding.' });
     }
 
-    const brandingFile = path.join(PERSIST_DIR, `branding_${tenant}.json`);
+    const brandingFile = getBrandingFile();
     let currentData = {};
     if (fs.existsSync(brandingFile)) {
       currentData = JSON.parse(fs.readFileSync(brandingFile, 'utf8'));
