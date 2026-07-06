@@ -45,33 +45,7 @@ interface SavedDevice {
 }
 
 const DEFAULT_ORGANIZATION_GROUPS = [
-  "Sin Grupo",
-  "Oficinas",
-  "Sabana",
-  "Alajuela Aeropuerto",
-  "City Mall",
-  "Real Alajuela",
-  "Praktico",
-  "Heredia",
-  "Oxigeno",
-  "San Francisco",
-  "Ventanitas",
-  "San Jose",
-  "Coronado",
-  "Multi Escazu",
-  "Multi Este",
-  "Curridabat",
-  "Pinares",
-  "Escazu",
-  "Santa Ana",
-  "Cartago",
-  "Desamparados",
-  "Lincoln",
-  "Tibas",
-  "Terramall",
-  "Multicentro",
-  "Servidores-Restaurantes",
-  "Servidores-Oficinas"
+  "Sin Grupo"
 ];
 
 export default function DeviceManager({ 

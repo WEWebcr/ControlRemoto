@@ -209,8 +209,8 @@ app.post('/api/login', (req, res) => {
   
   if (user) {
     const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
-    activeSessions.set(token, { username: user.username, role: user.role });
-    res.json({ success: true, token, username: user.username, role: user.role });
+    activeSessions.set(token, { username: user.username, role: user.role, assignedGroup: user.assignedGroup });
+    res.json({ success: true, token, username: user.username, role: user.role, assignedGroup: user.assignedGroup });
   } else {
     res.status(401).json({ success: false, error: 'Credenciales incorrectas' });
   }
@@ -234,7 +234,7 @@ app.get('/api/users', authenticateToken, (req, res) => {
   }
   const users = loadUsers();
   // No devolver las contraseñas reales por seguridad en el listado
-  const safeUsers = users.map(u => ({ username: u.username, role: u.role, passwordLength: u.password.length }));
+  const safeUsers = users.map(u => ({ username: u.username, role: u.role, assignedGroup: u.assignedGroup, passwordLength: u.password.length }));
   res.json(safeUsers);
 });
 
@@ -242,12 +242,12 @@ app.post('/api/users', authenticateToken, (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de administrador.' });
   }
-  const { username, password, role } = req.body;
+  const { username, password, role, assignedGroup } = req.body;
   const users = loadUsers();
   if (users.find(u => u.username === username)) {
     return res.status(400).json({ error: 'El usuario ya existe' });
   }
-  users.push({ username, password, role: role || 'user' });
+  users.push({ username, password, role: role || 'user', assignedGroup });
   saveUsers(users);
   res.json({ success: true });
 });
@@ -256,13 +256,14 @@ app.put('/api/users/:username', authenticateToken, (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de administrador.' });
   }
-  const { password, role } = req.body;
+  const { password, role, assignedGroup } = req.body;
   const users = loadUsers();
   const index = users.findIndex(u => u.username === req.params.username);
   if (index === -1) return res.status(404).json({ error: 'Usuario no encontrado' });
   
   if (password) users[index].password = password;
   if (role && req.params.username !== 'admin') users[index].role = role; // No permitir quitar admin al admin principal
+  if (assignedGroup !== undefined) users[index].assignedGroup = assignedGroup;
   
   saveUsers(users);
   res.json({ success: true });
@@ -372,9 +373,19 @@ app.get('/api/apk-history', authenticateToken, (req, res) => {
   res.json(loadApkHistory());
 });
 
-// Endpoint para obtener la lista de grupos (público para clientes y admins)
-app.get('/api/groups', (req, res) => {
-  res.json(loadGroups());
+// Endpoint para obtener la lista de grupos
+app.get('/api/groups', authenticateToken, (req, res) => {
+  const groups = loadGroups();
+  if (req.user.role === 'admin') {
+    res.json(groups);
+  } else {
+    // Cliente
+    if (req.user.assignedGroup) {
+      res.json([req.user.assignedGroup]);
+    } else {
+      res.json([]);
+    }
+  }
 });
 
 // Endpoint para guardar la lista de grupos (solo Administradores)
@@ -390,9 +401,16 @@ app.post('/api/groups', authenticateToken, (req, res) => {
   res.json({ success: true, groups });
 });
 
-// Endpoint para obtener la lista de dispositivos guardados (público para clientes y admins)
-app.get('/api/devices', (req, res) => {
-  res.json(loadDevices());
+// Endpoint para obtener la lista de dispositivos guardados
+app.get('/api/devices', authenticateToken, (req, res) => {
+  const devices = loadDevices();
+  if (req.user.role === 'admin') {
+    res.json(devices);
+  } else {
+    // Cliente
+    const clientDevices = devices.filter(d => d.group === req.user.assignedGroup);
+    res.json(clientDevices);
+  }
 });
 
 // Endpoint para guardar la lista de dispositivos (solo Administradores)
@@ -409,7 +427,7 @@ app.post('/api/devices', authenticateToken, (req, res) => {
 });
 
 // Endpoint para obtener la lista de grupos fijados
-app.get('/api/pinned-groups', (req, res) => {
+app.get('/api/pinned-groups', authenticateToken, (req, res) => {
   res.json(loadPinnedGroups());
 });
 
@@ -849,6 +867,40 @@ app.get('/status', (req, res) => {
   });
 });
 
+// Función helper para emitir lista de dispositivos filtrada por cliente (Multi-Tenancy)
+function broadcastDevicesUpdate() {
+  const allConnected = Array.from(connectedDevices.values());
+  const allOnlineIds = allConnected.filter(d => d.isAndroid || d.isWindows).map(d => d.roomId);
+  const savedDevices = loadDevices();
+
+  const room = io.sockets.adapter.rooms.get('dashboard-room');
+  if (!room) return;
+
+  for (const socketId of room) {
+    const socket = io.sockets.sockets.get(socketId);
+    if (!socket || !socket.user) continue;
+
+    if (socket.user.role === 'admin') {
+      socket.emit('devices-update', allConnected);
+      socket.emit('online-devices', allOnlineIds);
+    } else {
+      const allowedGroup = socket.user.assignedGroup;
+      const clientDevicesIds = savedDevices.filter(d => d.group === allowedGroup).map(d => d.id);
+      
+      const clientConnected = allConnected.filter(d => {
+        if (!d.isAndroid && !d.isWindows) return false;
+        if (clientDevicesIds.includes(d.roomId)) return true;
+        if (d.specs && d.specs.group === allowedGroup) return true;
+        return false;
+      });
+      
+      const clientOnlineIds = clientConnected.map(d => d.roomId);
+      socket.emit('devices-update', clientConnected);
+      socket.emit('online-devices', clientOnlineIds);
+    }
+  }
+}
+
 io.on('connection', (socket) => {
   const ts = () => new Date().toTimeString().split(' ')[0];
   console.log(`[${ts()}] NUEVA CONEXIÓN: ${socket.id} desde ${socket.handshake.address}`);
@@ -861,7 +913,7 @@ io.on('connection', (socket) => {
       status: `Admin Windows (${socket.user.username})`,
       connectedAt: new Date().toISOString()
     });
-    io.to('dashboard-room').emit('devices-update', Array.from(connectedDevices.values()));
+    broadcastDevicesUpdate();
   }
 
   // Permitir autenticación después de conectar (para la consola web después de iniciar sesión)
@@ -875,12 +927,9 @@ io.on('connection', (socket) => {
         status: `Admin Web (${session.username})`,
         connectedAt: new Date().toISOString()
       });
-      io.to('dashboard-room').emit('devices-update', Array.from(connectedDevices.values()));
+      broadcastDevicesUpdate();
       
-      // Enviar lista inicial de equipos online
-      const onlineIds = Array.from(connectedDevices.values())
-        .filter(d => d.isAndroid || d.isWindows).map(d => d.roomId);
-      socket.emit('online-devices', onlineIds);
+      // Las actualizaciones de online-devices ya se manejan dentro de broadcastDevicesUpdate
       console.log(`[${ts()}] Socket ${socket.id} autenticado como ${session.username}`);
     } else {
       socket.emit('auth-error', 'Token inválido');
@@ -913,11 +962,7 @@ io.on('connection', (socket) => {
       isWindows: isWin,
       specs: specs || null
     });
-    const onlineIds = Array.from(connectedDevices.values())
-      .filter(d => d.isAndroid || d.isWindows).map(d => d.roomId);
-    console.log(`[${ts()}] Dispositivos online: ${JSON.stringify(onlineIds)}`);
-    io.to('dashboard-room').emit('online-devices', onlineIds);
-    io.to('dashboard-room').emit('devices-update', Array.from(connectedDevices.values()));
+    broadcastDevicesUpdate();
   });
 
   // Admin uniéndose a sala
@@ -931,7 +976,7 @@ io.on('connection', (socket) => {
       connectedAt: new Date().toISOString(),
       isAndroid: false
     });
-    io.to('dashboard-room').emit('devices-update', Array.from(connectedDevices.values()));
+    broadcastDevicesUpdate();
     socket.to(roomId).emit('user-connected', socket.id);
     console.log(`[${ts()}] user-connected emitido a sala ${roomId}`);
   });
@@ -951,7 +996,7 @@ io.on('connection', (socket) => {
     } else {
       connectedDevices.delete(socket.id);
     }
-    io.to('dashboard-room').emit('devices-update', Array.from(connectedDevices.values()));
+    broadcastDevicesUpdate();
     socket.to(roomId).emit('user-disconnected', socket.id);
   });
 
@@ -981,10 +1026,7 @@ io.on('connection', (socket) => {
       socket.to(device.roomId).emit('user-disconnected', socket.id);
     }
     connectedDevices.delete(socket.id);
-    const onlineIds = Array.from(connectedDevices.values())
-      .filter(d => d.isAndroid || d.isWindows).map(d => d.roomId);
-    io.to('dashboard-room').emit('online-devices', onlineIds);
-    io.to('dashboard-room').emit('devices-update', Array.from(connectedDevices.values()));
+    broadcastDevicesUpdate();
   });
 
   // Relés para Automatización de VPN SSL y Queries
