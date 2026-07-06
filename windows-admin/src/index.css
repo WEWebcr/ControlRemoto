@@ -1,13 +1,13 @@
 :root {
-  --bg-darker: #080c16;
-  --bg-dark: #0d1323;
-  --bg-card: rgba(13, 19, 35, 0.7);
-  --bg-panel: #131b2f;
+  --bg-darker: #0f172a;
+  --bg-dark: #1e293b;
+  --bg-card: rgba(30, 41, 59, 0.7);
+  --bg-panel: #1e293b;
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
-  --primary: #FF5722;
-  --primary-hover: #E64A19;
-  --accent: #FFC107;
+  --primary: #8b5cf6;
+  --primary-hover: #7c3aed;
+  --accent: #38bdf8;
   --border: rgba(255, 255, 255, 0.05);
   --success: #10b981;
 }
@@ -252,8 +252,8 @@ body {
 }
 
 .action-card.primary {
-  border-color: rgba(255, 87, 34, 0.3);
-  background: linear-gradient(145deg, rgba(20, 25, 40, 0.9), rgba(10, 14, 25, 0.9));
+  border-color: rgba(139, 92, 246, 0.3);
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
 }
 
 .action-card.primary:hover {
@@ -359,7 +359,7 @@ input:focus, select:focus {
 }
 
 button {
-  background: var(--primary);
+  background: linear-gradient(to right, var(--primary), var(--accent));
   color: white;
   border: none;
   padding: 12px 20px;
@@ -374,7 +374,7 @@ button {
 }
 
 button:hover {
-  background: var(--primary-hover);
+  background: linear-gradient(to right, var(--primary-hover), var(--primary));
 }
 
 button:disabled {
@@ -541,16 +541,12 @@ button:disabled {
 }
 
 .icon-circle {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, rgba(255, 87, 34, 0.2), rgba(255, 193, 7, 0.1));
+  width: 80px;
+  height: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--primary);
   margin-bottom: 8px;
-  border: 1px solid rgba(255, 87, 34, 0.3);
 }
 
 .login-header p {

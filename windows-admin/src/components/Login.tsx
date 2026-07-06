@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Flame } from 'lucide-react';
 
 interface LoginProps {
   onLoginSuccess: (serverUrl: string, username: string, role: string, token: string) => void;
@@ -64,7 +63,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
       <div className="login-panel">
         <div className="login-header">
           <div className="icon-circle">
-            <Flame size={32} strokeWidth={2.5} />
+            <img src="/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
           <h2>Remoto Control J&M</h2>
           <p>Autenticación Requerida</p>
