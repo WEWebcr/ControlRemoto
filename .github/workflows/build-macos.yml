@@ -1,0 +1,56 @@
+name: Build macOS Installers
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # 1. Build and Package windows-admin (Admin Console) for macOS
+      - name: Install dependencies (Admin)
+        run: |
+          cd windows-admin
+          npm install
+
+      - name: Build Admin App
+        run: |
+          cd windows-admin
+          npm run build
+
+      - name: Package Admin App for macOS
+        run: |
+          cd windows-admin
+          npx electron-builder --mac dmg --universal
+
+      # 2. Build and Package windows-client (Client App) for macOS
+      - name: Install dependencies (Client)
+        run: |
+          cd windows-client
+          npm install
+
+      - name: Package Client App for macOS
+        run: |
+          cd windows-client
+          npx electron-builder --mac dmg --universal
+
+      # 3. Upload DMG files as GitHub Actions Artifacts
+      - name: Upload macOS DMG Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macOS-Installers
+          path: |
+            windows-admin/release/*.dmg
+            windows-client/dist/*.dmg

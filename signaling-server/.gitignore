@@ -1,0 +1,13 @@
+node_modules/
+*.log
+apks_history.json
+public/versions/
+public/app.apk
+
+# Datos de runtime del deploy self-hosted (no subir a GitHub: contienen datos/credenciales)
+devices.json
+groups.json
+users.json
+pinned_groups.json
+email_config.json
+proceso_database.json

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+release/
+*.exe
+*.apk
+win-unpacked/
+android-client/.gradle/
+android-client/build/
+android-client/app/build/
+.DS_Store

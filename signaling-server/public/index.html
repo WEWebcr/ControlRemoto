@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consola de Administración - Rosti Control Remoto</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        :root {
+            --bg: #080c16;
+            --card: #0d1323;
+            --card-panel: #131b2f;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #FF5722;
+            --primary-hover: #E64A19;
+            --accent: #FFC107;
+            --success: #10b981;
+            --danger: #ef4444;
+            --border: rgba(255, 255, 255, 0.05);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        /* VISTA DE LOGIN */
+        .login-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .login-card {
+            background-color: var(--card-panel);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+
+        .logo-wrapper {
+            margin-bottom: 24px;
+        }
+
+        .logo-icon {
+            color: var(--accent);
+            filter: drop-shadow(0 0 10px var(--primary));
+        }
+
+        .login-card h2 {
+            margin: 0 0 8px 0;
+            color: var(--text);
+            font-size: 1.5rem;
+        }
+
+        .login-card p {
+            color: var(--text-muted);
+            margin: 0 0 32px 0;
+            font-size: 0.9rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+            margin-bottom: 20px;
+            gap: 8px;
+        }
+
+        .input-group label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .input-group input {
+            background: rgba(8, 12, 22, 0.6);
+            border: 1px solid var(--border);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            outline: none;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .input-group input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(255, 87, 34, 0.2);
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.95rem;
+            width: 100%;
+        }
+
+        .btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .error-message {
+            color: var(--danger);
+            font-size: 0.85rem;
+            text-align: center;
+            background: rgba(239, 68, 68, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        /* VISTA PRINCIPAL (DASHBOARD) */
+        .header {
+            background-color: var(--card);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0;
+            color: var(--primary);
+            font-size: 1.3rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .user-info span {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .dashboard-content {
+            padding: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+        }
+
+        .stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .stat-card {
+            background-color: var(--card-panel);
+            padding: 24px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            flex: 1;
+            min-width: 240px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .stat-card h3 {
+            margin: 0 0 12px 0;
+            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-card .value {
+            font-size: 48px;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        /* FORMULARIOS Y TABLAS */
+        .section-card {
+            background-color: var(--card-panel);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .section-card h2 {
+            margin: 0 0 20px 0;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background-color: rgba(255,255,255,0.02);
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            font-size: 0.9rem;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--success);
+            margin-right: 8px;
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        .code-block {
+            color: var(--accent);
+            font-family: monospace;
+            font-size: 0.95rem;
+            background: rgba(0,0,0,0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* PROGRESS BAR */
+        .progress-container {
+            margin-top: 16px;
+            background: rgba(8, 12, 22, 0.6);
+            border-radius: 8px;
+            height: 20px;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            display: none;
+            border: 1px solid var(--border);
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: var(--success);
+            transition: width 0.1s ease;
+        }
+
+        .progress-text {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: white;
+        }
+
+        .btn-table {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            border-radius: 4px;
+            width: auto;
+            display: inline-flex;
+        }
+
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 32px;
+        }
+
+        @media (min-width: 900px) {
+            .grid-layout {
+                grid-template-columns: 2fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. VISTA DE INICIO DE SESIÓN -->
+    <div id="login-view" class="login-container">
+        <div class="login-card">
+            <div class="logo-wrapper">
+                <svg class="logo-icon" width="64" height="64" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C7 2 6 7 6 10c0 4.5 3 7.5 6 12 3-4.5 6-7.5 6-12 0-3-1-8-6-8zm-1.5 13.5c-1.38 0-2.5-1.12-2.5-2.5 0-1.8 2.5-4.5 2.5-4.5s2.5 2.7 2.5 4.5c0 1.38-1.12 2.5-2.5 2.5z"/></svg>
+            </div>
+            <h2>Acceso a la Consola</h2>
+            <p>Introduce tus credenciales para ingresar</p>
+
+            <div id="login-error" class="error-message"></div>
+
+            <form id="login-form" onsubmit="handleLoginSubmit(event)">
+                <div class="input-group">
+                    <label for="username">Usuario</label>
+                    <input type="text" id="username" required placeholder="Nombre de usuario" autofocus>
+                </div>
+                <div class="input-group">
+                    <label for="password">Contraseña</label>
+                    <input type="password" id="password" required placeholder="••••••••">
+                </div>
+                <button type="submit" class="btn">Iniciar Sesión</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. VISTA PRINCIPAL (DASHBOARD) -->
+    <div id="dashboard-view" style="display: none;">
+        <div class="header">
+            <h1 class="header-title">
+                <svg class="logo-icon" width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C7 2 6 7 6 10c0 4.5 3 7.5 6 12 3-4.5 6-7.5 6-12 0-3-1-8-6-8zm-1.5 13.5c-1.38 0-2.5-1.12-2.5-2.5 0-1.8 2.5-4.5 2.5-4.5s2.5 2.7 2.5 4.5c0 1.38-1.12 2.5-2.5 2.5z"/></svg>
+                Consola Rosti
+            </h1>
+            <div class="user-info">
+                <span id="user-display">Usuario: admin</span>
+                <button onclick="handleLogout()" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem; width: auto;">
+                    Cerrar Sesión
+                </button>
+            </div>
+        </div>
+
+        <div class="dashboard-content">
+            <div class="stats">
+                <div class="stat-card" style="max-width: 250px;">
+                    <h3>Conexiones Activas</h3>
+                    <div class="value" id="total-count">0</div>
+                </div>
+
+                <div class="stat-card">
+                    <h3 style="color: var(--primary); display: flex; align-items: center; gap: 8px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent);"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Descarga del Cliente Android (APK)
+                    </h3>
+                    <div style="font-size: 0.85rem; line-height: 1.5; margin-top: 8px;">
+                        <p style="margin: 0 0 8px 0; color: var(--text-muted);">
+                            Descarga la última versión del APK directamente en tu navegador o ingresando la dirección corta en la aplicación Downloader:
+                        </p>
+                        <a id="web-download-btn" href="#" download class="btn" style="width: auto; padding: 8px 16px; font-size: 0.85rem; margin-bottom: 12px;">
+                            Descargar app.apk (Última versión)
+                        </a>
+                        <div style="background: rgba(0,0,0,0.25); padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+                            <strong style="color: var(--text);">En la aplicación Downloader (TV / Box):</strong><br>
+                            Introduce esta dirección súper corta y pulsa <strong>Go</strong>:<br>
+                            <code id="downloader-url-display" class="code-block" style="display: block; margin-top: 6px; text-align: center; word-break: break-all; font-size: 1.1rem; padding: 6px 12px;">Cargando...</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-layout">
+                <!-- Columna Izquierda: Monitoreo y Versiones -->
+                <div style="display: flex; flex-direction: column; gap: 32px;">
+                    <!-- Equipos Conectados -->
+                    <div class="section-card">
+                        <h2>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                            Monitoreo de Sockets en Tiempo Real
+                        </h2>
+                        <div style="overflow-x: auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID Conexión</th>
+                                        <th>Estado / Tipo</th>
+                                        <th>Sala (Room)</th>
+                                        <th>Conectado Desde</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="device-list">
+                                    <tr>
+                                        <td colspan="4" style="text-align: center; color: var(--text-muted);">Cargando estado de la red...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Historial de Versiones -->
+                    <div class="section-card">
+                        <h2>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                            Historial de Versiones APK
+                        </h2>
+                        <div style="overflow-x: auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Versión</th>
+                                        <th>Fecha</th>
+                                        <th>Subido Por</th>
+                                        <th>Notas</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="apk-history-list">
+                                    <tr>
+                                        <td colspan="5" style="text-align: center; color: var(--text-muted);">Cargando historial de versiones...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Columna Derecha: Subida de APK (Solo para Administradores) -->
+                <div id="upload-section" class="section-card" style="display: none; height: fit-content;">
+                    <h2>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        Subir Nueva Versión (APK)
+                    </h2>
+                    <form id="upload-form" onsubmit="handleApkUpload(event)" style="display: flex; flex-direction: column; gap: 16px;">
+                        <div class="input-group">
+                            <label for="apk-version">Versión del APK</label>
+                            <input type="text" id="apk-version" required placeholder="Ej: 1.0.2">
+                        </div>
+                        <div class="input-group">
+                            <label for="apk-notes">Notas de Versión</label>
+                            <input type="text" id="apk-notes" placeholder="Ej: Solucionado bug de archivos">
+                        </div>
+                        <div class="input-group">
+                            <label for="apk-file">Seleccionar archivo .apk</label>
+                            <input type="file" id="apk-file" accept=".apk" required style="padding: 8px;">
+                        </div>
+                        <button type="submit" id="upload-submit-btn" class="btn">Subir y Actualizar</button>
+                    </form>
+                    <div id="upload-progress-container" class="progress-container">
+                        <div id="upload-progress-bar" class="progress-bar"></div>
+                        <div id="upload-progress-text" class="progress-text">0%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTROLADOR JAVASCRIPT -->
+    <script>
+        let socket = null;
+
+        // Cargar datos locales al iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('rosti_dashboard_token');
+            if (token) {
+                showDashboard();
+            } else {
+                showLogin();
+            }
+        });
+
+        function showLogin() {
+            document.getElementById('login-view').style.display = 'flex';
+            document.getElementById('dashboard-view').style.display = 'none';
+        }
+
+        function showDashboard() {
+            document.getElementById('login-view').style.display = 'none';
+            document.getElementById('dashboard-view').style.display = 'block';
+
+            const username = localStorage.getItem('rosti_dashboard_username');
+            const role = localStorage.getItem('rosti_dashboard_role');
+            const token = localStorage.getItem('rosti_dashboard_token');
+
+            document.getElementById('user-display').textContent = `Usuario: ${username} (${role === 'admin' ? 'Administrador' : 'Operador'})`;
+
+
+
+            // Configurar url de Downloader
+            const host = window.location.origin.replace(/^https?:\/\//, '');
+            document.getElementById('downloader-url-display').textContent = `${host}/1`;
+
+            // Mostrar el panel de subida si es administrador
+            if (role === 'admin') {
+                document.getElementById('upload-section').style.display = 'block';
+            } else {
+                document.getElementById('upload-section').style.display = 'none';
+            }
+
+            // Iniciar conexión de sockets
+            initSockets(token);
+
+            // Cargar historial
+            loadApkHistory();
+        }
+
+        // Manejar Login
+        async function handleLoginSubmit(event) {
+            event.preventDefault();
+            const errDiv = document.getElementById('login-error');
+            errDiv.style.display = 'none';
+
+            const usernameInput = document.getElementById('username').value;
+            const passwordInput = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: usernameInput, password: passwordInput })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    localStorage.setItem('rosti_dashboard_token', data.token);
+                    localStorage.setItem('rosti_dashboard_username', data.username);
+                    localStorage.setItem('rosti_dashboard_role', data.role);
+                    showDashboard();
+                } else {
+                    errDiv.textContent = data.error || 'Credenciales incorrectas';
+                    errDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errDiv.textContent = 'Error conectando al servidor';
+                errDiv.style.display = 'block';
+            }
+        }
+
+        // Manejar Logout
+        async function handleLogout() {
+            const token = localStorage.getItem('rosti_dashboard_token');
+            if (token) {
+                try {
+                    await fetch('/api/logout', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                } catch(e) {}
+            }
+
+            localStorage.removeItem('rosti_dashboard_token');
+            localStorage.removeItem('rosti_dashboard_username');
+            localStorage.removeItem('rosti_dashboard_role');
+
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+            }
+
+            showLogin();
+        }
+
+        // Conexión de Sockets
+        function initSockets(token) {
+            if (socket) {
+                socket.disconnect();
+            }
+
+            // Conectar enviando auth token
+            socket = io({
+                auth: { token: token }
+            });
+
+            // Enviar auth event en caso de reconexiones automáticas
+            socket.on('connect', () => {
+                socket.emit('authenticate', token);
+            });
+
+            const tbody = document.getElementById('device-list');
+            const countEl = document.getElementById('total-count');
+
+            socket.on('devices-update', (devices) => {
+                countEl.textContent = devices.length;
+                
+                if (devices.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No hay dispositivos conectados en el servidor.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = devices.map(d => {
+                    let displayType = d.isAndroid ? 'Cliente Android' : (d.isWindows ? 'Cliente Windows' : d.status);
+                    if (d.specs) {
+                        if (d.specs.name) {
+                            displayType = `${d.specs.name} <span style="font-size: 0.8rem; opacity: 0.7;">(${d.specs.group || 'Sin Grupo'})</span>`;
+                        } else if (d.isAndroid) {
+                            displayType = `Cliente Android <span style="font-size: 0.8rem; opacity: 0.7;">(${d.specs.marca || ''} ${d.specs.modelo || ''})</span>`;
+                        }
+                    }
+                    return `
+                        <tr>
+                            <td><span style="font-family: monospace;">${d.id}</span></td>
+                            <td>
+                                <span class="status-dot" style="background-color: ${(d.isAndroid || d.isWindows) ? 'var(--success)' : 'var(--primary)'}; box-shadow: 0 0 8px ${(d.isAndroid || d.isWindows) ? 'var(--success)' : 'var(--primary)'}"></span>
+                                ${displayType}
+                            </td>
+                            <td><strong>${d.roomId || '-'}</strong></td>
+                            <td>${d.connectedAt ? new Date(d.connectedAt).toLocaleTimeString() : '-'}</td>
+                        </tr>
+                    `;
+                }).join('');
+            });
+
+            socket.on('auth-error', (err) => {
+                console.error("Error de autenticación por socket:", err);
+                handleLogout();
+            });
+        }
+
+        // Cargar Historial de APKs
+        async function loadApkHistory() {
+            const token = localStorage.getItem('rosti_dashboard_token');
+            const role = localStorage.getItem('rosti_dashboard_role');
+            const tbody = document.getElementById('apk-history-list');
+            const dlBtn = document.getElementById('web-download-btn');
+
+            try {
+                const response = await fetch('/api/apk-history', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.status === 401 || response.status === 403) {
+                    handleLogout();
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No se han cargado versiones APK todavía.</td></tr>';
+                    dlBtn.textContent = 'Sin APKs disponibles';
+                    dlBtn.removeAttribute('href');
+                    dlBtn.style.opacity = '0.5';
+                    dlBtn.style.pointerEvents = 'none';
+                    return;
+                }
+
+                // Ordenar por fecha de subida descendente (más nuevo primero)
+                const sorted = [...data].sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+                const latest = sorted[0];
+
+                // Actualizar botón superior de descarga dinámicamente
+                dlBtn.textContent = `Descargar ${latest.filename} (Última versión)`;
+                dlBtn.href = `/download/${latest.filename}?token=${token}`;
+                dlBtn.setAttribute('download', latest.filename);
+                dlBtn.style.opacity = '1';
+                dlBtn.style.pointerEvents = 'auto';
+
+                tbody.innerHTML = sorted.map(h => `
+                    <tr>
+                        <td><strong>v${h.version}</strong></td>
+                        <td>${new Date(h.uploadedAt).toLocaleString()}</td>
+                        <td>${h.uploadedBy}</td>
+                        <td>${h.notes || '-'}</td>
+                        <td>
+                            <a href="/download/${h.filename}?token=${token}" download="${h.filename}" class="btn btn-table" style="margin-right: 8px;">Descargar</a>
+                            ${role === 'admin' ? `<button onclick="deleteApkVersion('${h.version}')" class="btn btn-danger btn-table">Eliminar</button>` : ''}
+                        </td>
+                    </tr>
+                `).join('');
+
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--danger);">Error cargando historial de versiones</td></tr>';
+            }
+        }
+
+        // Subir APK
+        function handleApkUpload(event) {
+            event.preventDefault();
+            const token = localStorage.getItem('rosti_dashboard_token');
+            const fileInput = document.getElementById('apk-file');
+            const versionInput = document.getElementById('apk-version').value;
+            const notesInput = document.getElementById('apk-notes').value;
+
+            if (!fileInput.files[0]) {
+                alert("Selecciona un archivo APK");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('version', versionInput);
+            formData.append('notes', notesInput);
+            formData.append('apk', fileInput.files[0]);
+
+            const submitBtn = document.getElementById('upload-submit-btn');
+            const progressContainer = document.getElementById('upload-progress-container');
+            const progressBar = document.getElementById('upload-progress-bar');
+            const progressText = document.getElementById('upload-progress-text');
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Subiendo...";
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressText.textContent = '0%';
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/upload-apk', true);
+            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+            // Progreso de carga
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    progressBar.style.width = percent + '%';
+                    progressText.textContent = percent + '%';
+                }
+            };
+
+            // Fin de carga
+            xhr.onload = function() {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Subir y Actualizar";
+                progressContainer.style.display = 'none';
+
+                if (xhr.status === 200) {
+                    alert("¡APK subida y configurada con éxito!");
+                    document.getElementById('upload-form').reset();
+                    loadApkHistory();
+                } else {
+                    let errMsg = "Error al subir APK";
+                    try {
+                        const resObj = JSON.parse(xhr.responseText);
+                        errMsg = resObj.error || errMsg;
+                    } catch(e) {}
+                    alert(errMsg);
+                }
+            };
+
+            xhr.onerror = function() {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Subir y Actualizar";
+                progressContainer.style.display = 'none';
+                alert("Error de conexión al subir APK");
+            };
+
+            xhr.send(formData);
+        }
+
+        // Eliminar Versión de APK
+        async function deleteApkVersion(version) {
+            if (!confirm(`¿Estás seguro de que quieres eliminar la versión v${version}? Se borrará permanentemente del servidor.`)) {
+                return;
+            }
+
+            const token = localStorage.getItem('rosti_dashboard_token');
+            try {
+                const response = await fetch(`/api/delete-apk/${version}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    alert("Versión eliminada con éxito.");
+                    loadApkHistory();
+                } else {
+                    const resObj = await response.json();
+                    alert(resObj.error || "Error al eliminar versión.");
+                }
+            } catch (err) {
+                alert("Error de conexión al eliminar versión.");
+            }
+        }
+    </script>
+</body>
+</html>

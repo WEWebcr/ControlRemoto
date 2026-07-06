@@ -1,0 +1,13 @@
+{
+  "name": "hostgator-tests",
+  "version": "1.0.0",
+  "description": "Compatibility tests for HostGator Node.js environment",
+  "main": "test-ws.js",
+  "scripts": {
+    "start": "node test-ws.js",
+    "keepalive": "node test-keepalive.js"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  }
+}

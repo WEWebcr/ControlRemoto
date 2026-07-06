@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center"
+    android:background="#121212">
+
+    <ImageView
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:src="@drawable/ic_rosti_logo"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="RostiControlapp"
+        android:textColor="#FFFFFF"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="32dp"/>
+
+    <!-- Pantalla de Login (Se oculta si está autenticado) -->
+    <LinearLayout
+        android:id="@+id/layoutLogin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="visible">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Autenticación Requerida"
+            android:textColor="#AAAAAA"
+            android:textSize="16sp"
+            android:layout_marginBottom="16dp"/>
+
+        <EditText
+            android:id="@+id/etUser"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Usuario"
+            android:textColorHint="#777777"
+            android:textColor="#FFFFFF"
+            android:background="#333333"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp"/>
+
+        <EditText
+            android:id="@+id/etPass"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textPassword"
+            android:hint="Contraseña"
+            android:textColorHint="#777777"
+            android:textColor="#FFFFFF"
+            android:background="#333333"
+            android:padding="16dp"
+            android:layout_marginBottom="24dp"/>
+
+        <Button
+            android:id="@+id/btnLogin"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Ingresar"
+            android:backgroundTint="#FF5722"
+            android:textColor="#FFFFFF"/>
+    </LinearLayout>
+
+    <!-- Pantalla de Dashboard (Se muestra si está autenticado) -->
+    <LinearLayout
+        android:id="@+id/layoutDashboard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Este dispositivo está registrado de forma permanente. Su ID es:"
+            android:textColor="#AAAAAA"
+            android:textSize="16sp"
+            android:gravity="center"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:id="@+id/tvRoomCode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="---"
+            android:textColor="#FF5722"
+            android:textSize="48sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:letterSpacing="0.1"
+            android:layout_marginBottom="32dp"/>
+
+        <Button
+            android:id="@+id/btnConnect"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="INICIAR TRANSMISIÓN (RECONECTAR)"
+            android:backgroundTint="#FF4400"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp"/>
+
+        <Button
+            android:id="@+id/btnAccessibility"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Configurar Control Remoto (Accesibilidad)"
+            android:backgroundTint="#333333"
+            android:textColor="#FFFFFF"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:text="Esperando inicio de transmisión..."
+            android:textColor="#00FF88"
+            android:textSize="11sp"
+            android:fontFamily="monospace"
+            android:background="#0A0A0A"
+            android:padding="8dp"
+            android:gravity="bottom"
+            android:scrollbars="vertical"/>
+    </LinearLayout>
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
+
+    <Button
+        android:id="@+id/btnSettings"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Configurar Servidor"
+        android:backgroundTint="#222222"
+        android:textColor="#AAAAAA"
+        android:textSize="12sp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="16dp"/>
+
+</LinearLayout>
